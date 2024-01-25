@@ -35,6 +35,8 @@ public class ApArticleServiceImpl extends ServiceImpl<ApArticleMapper, ApArticle
             size = 10;
         }
         size = Math.min(size, MAX_PAGE_SIZE);
+        dto.setSize(20);
+        // TODO size的翻页问题
         dto.setSize(size);
         if (!type.equals(LOADTYPE_LOAD_MORE) && !type.equals(LOADTYPE_LOAD_NEW)) {
             type = LOADTYPE_LOAD_MORE;
