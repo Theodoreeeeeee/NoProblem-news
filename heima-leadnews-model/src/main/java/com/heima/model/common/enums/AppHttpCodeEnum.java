@@ -19,12 +19,14 @@ public enum AppHttpCodeEnum {
     PARAM_INVALID(501, "无效参数"),
     FILE_DELETE_FAIL(501, "文件删除失败"),
     FILE_UPDATE_FAIL(501, "文件更新失败"),
+    FILE_HAS_BEEN_PUBLISHED(501, "文章已发布，不能删除"),
     PARAM_IMAGE_FORMAT_ERROR(502, "图片格式有误"),
     SERVER_ERROR(503, "服务器内部错误"),
     // 数据错误 1000~2000
     DATA_EXIST(1000, "数据已经存在"),
     AP_USER_DATA_NOT_EXIST(1001, "ApUser数据不存在"),
     DATA_NOT_EXIST(1002, "数据不存在"),
+    NEWS_NOT_EXIST(1002, "文章不存在"),
     // 数据错误 3000~3500
     NO_OPERATOR_AUTH(3000, "无权限操作"),
     NEED_ADMIND(3001, "需要管理员权限"),

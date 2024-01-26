@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.github.tobato.fastdfs.domain.proto.StatusConstants;
 import com.heima.common.exception.CustomException;
 import com.heima.model.common.dtos.PageResponseResult;
 import com.heima.model.common.dtos.ResponseResult;
@@ -22,7 +23,6 @@ import com.heima.wemedia.mapper.WmNewsMaterialMapper;
 import com.heima.wemedia.service.WmNewsService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.checkerframework.checker.units.qual.A;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -37,12 +37,16 @@ import java.util.stream.Collectors;
 @Transactional
 @Slf4j
 public class WmNewsServiceImpl extends ServiceImpl<WmNewsMapper, WmNews> implements WmNewsService {
+    private static final Short PUBLISHED = 9;
 
     @Autowired
     private WmNewsMaterialMapper wmNewsMaterialMapper;
 
     @Autowired
     private WmMaterialMapper wmMaterialMapper;
+
+    @Autowired
+    private WmNewsMapper wmNewsMapper;
 
     /**
      * 条件查询文章列表
@@ -125,6 +129,76 @@ public class WmNewsServiceImpl extends ServiceImpl<WmNewsMapper, WmNews> impleme
         // 4.不是草稿，保存文章封面图片与素材的关系，如果当前布局是自动的，需要匹配封面图片
         saveRelativeInfoForCover(dto, wmNews, materials);
         return ResponseResult.okResult(AppHttpCodeEnum.SUCCESS);
+    }
+
+    /**
+     * 查询文章详情
+     *
+     * @param id
+     * @return
+     */
+    @Override
+    public ResponseResult queryDetails(Integer id) {
+        if (id == null) {
+            return ResponseResult.errorResult(AppHttpCodeEnum.PARAM_INVALID);
+        }
+        WmNews wmNews = wmNewsMapper.selectOne(Wrappers.<WmNews>lambdaQuery().eq(WmNews::getId, id));
+        if (wmNews == null) {
+            return ResponseResult.errorResult(AppHttpCodeEnum.DATA_NOT_EXIST);
+        }
+        // TODO host的需求 ?
+        return new ResponseResult(200, "操作成功", wmNews);
+    }
+
+    /**
+     * 删除文章
+     *
+     * @param id
+     * @return
+     */
+    @Override
+    public ResponseResult deleteNews(Integer id) {
+        if (id == null) {
+            return ResponseResult.errorResult(AppHttpCodeEnum.PARAM_INVALID);
+        }
+        WmNews wmNews = wmNewsMapper.selectOne(Wrappers.<WmNews>lambdaQuery().eq(WmNews::getId, id));
+        if (wmNews == null) {
+            return ResponseResult.errorResult(AppHttpCodeEnum.NEWS_NOT_EXIST);
+        }
+        // 判断是否有关联关系
+        //   * 当前状态
+        //     * 0 草稿
+        //     * 1 提交（待审核）
+        //     * 2 审核失败
+        //     * 3 人工审核
+        //     * 4 人工审核通过
+        //     * 8 审核通过（待发布）
+        //     * 9 已发布
+        if (PUBLISHED.equals(wmNews.getStatus())) {
+            return ResponseResult.errorResult(AppHttpCodeEnum.FILE_HAS_BEEN_PUBLISHED);
+        }
+        int res = wmNewsMapper.deleteById(id);
+        return res == 1 ? ResponseResult.okResult(AppHttpCodeEnum.SUCCESS) : ResponseResult.errorResult(AppHttpCodeEnum.FILE_DELETE_FAIL);
+    }
+
+    /**
+     * 文章上下架
+     *
+     * @param dto
+     * @return
+     */
+    @Override
+    public ResponseResult downOrUpNews(WmNewsDto dto) {
+        if (dto == null || dto.getEnable() == null) {
+            return ResponseResult.errorResult(AppHttpCodeEnum.PARAM_INVALID);
+        }
+        WmNews wmNews = wmNewsMapper.selectOne(Wrappers.<WmNews>lambdaQuery().eq(WmNews::getId, dto.getId()));
+        if (!PUBLISHED.equals(wmNews.getStatus())) {
+            return new ResponseResult(501, "当前文章不适发布状态，不能上下架");
+        }
+        wmNews.setEnable(dto.getEnable());
+        int res = wmNewsMapper.updateById(wmNews);
+        return res == 1 ? ResponseResult.okResult(AppHttpCodeEnum.SUCCESS) : ResponseResult.errorResult(AppHttpCodeEnum.FILE_UPDATE_FAIL);
     }
 
     /**
