@@ -20,13 +20,17 @@ import com.heima.utils.thread.WmThreadLocalUtil;
 import com.heima.wemedia.mapper.WmMaterialMapper;
 import com.heima.wemedia.mapper.WmNewsMapper;
 import com.heima.wemedia.mapper.WmNewsMaterialMapper;
+import com.heima.wemedia.service.WmNewsAutoScanService;
 import com.heima.wemedia.service.WmNewsService;
+import com.heima.wemedia.service.WmNewsTaskService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import javax.annotation.Resource;
 
 import static com.heima.common.constants.WeMediaConstants.*;
 
@@ -47,6 +51,11 @@ public class WmNewsServiceImpl extends ServiceImpl<WmNewsMapper, WmNews> impleme
 
     @Autowired
     private WmNewsMapper wmNewsMapper;
+    @Autowired
+    private WmNewsAutoScanService wmNewsAutoScanService;
+
+    @Resource
+    private WmNewsTaskService wmNewsTaskService;
 
     /**
      * 条件查询文章列表
@@ -128,6 +137,12 @@ public class WmNewsServiceImpl extends ServiceImpl<WmNewsMapper, WmNews> impleme
 
         // 4.不是草稿，保存文章封面图片与素材的关系，如果当前布局是自动的，需要匹配封面图片
         saveRelativeInfoForCover(dto, wmNews, materials);
+
+        // 审核文章
+//        wmNewsAutoScanService.autoScanWmNews(wmNews.getId()); // 该方法为一个异步方法@Async
+
+        wmNewsTaskService.addNewsToTask(wmNews.getId(), wmNews.getPublishTime()); // 添加审核任务
+
         return ResponseResult.okResult(AppHttpCodeEnum.SUCCESS);
     }
 
